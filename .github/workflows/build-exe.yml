@@ -78,8 +78,8 @@ jobs:
             dist/Cleaner.exe
             Cleaner-exe.zip
 
-      - name: Publish GitHub Release (only on manual run from this branch)
-        if: github.event_name == 'workflow_dispatch'
+      - name: Publish GitHub Release v1.0.0 with Cleaner.exe
+        if: success()
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
