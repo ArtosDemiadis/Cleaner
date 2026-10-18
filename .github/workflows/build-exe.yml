@@ -26,17 +26,19 @@ jobs:
       - name: Install PyInstaller
         run: pip install pyinstaller
 
-      - name: Build Cleaner.exe (onefile, UAC admin, tkinter GUI)
+      - name: Build Cleaner.exe (onefile, tkinter GUI)
         run: >
-          pyinstaller --onefile --name Cleaner --uac-admin
+          pyinstaller --onefile --name Cleaner
           --hidden-import tkinter --hidden-import _tkinter
           cleaner.py
 
       - name: Smoke test (CLI must start and print help)
-        shell: cmd
+        shell: pwsh
         run: |
-          dist\Cleaner.exe --help
-          dist\Cleaner.exe --dry-run --all --yes --no-ccleaner
+          & dist/Cleaner.exe --help
+          if ($LASTEXITCODE -ne 0) { throw "Cleaner.exe --help exit=$LASTEXITCODE" }
+          & dist/Cleaner.exe --dry-run --all --yes --no-ccleaner
+          if ($LASTEXITCODE -ne 0) { throw "Cleaner.exe --dry-run exit=$LASTEXITCODE" }
 
       - name: Pack archive (exe + config + readme)
         shell: pwsh

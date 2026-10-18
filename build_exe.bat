@@ -8,8 +8,9 @@ rem  Samosborka Cleaner.exe na Windows (esli ne hochetsya
 rem  skachivat gotovyy .exe s GitHub Releases):
 rem    1) Ustanovlen Python 3.10+  (python.org, galka Add to PATH)
 rem    2) Zapustit etot .bat - on postavit PyInstaller i soberot
-rem       dist\Cleaner.exe (odin fayl, zapros prav admina, GUI
-rem       po dvoynomu kliku, CLI: Cleaner.exe --dry-run --all)
+rem       dist\Cleaner.exe (odin fayl, GUI po dvoynomu kliku,
+rem       CLI: Cleaner.exe --dry-run --all; dlya polnoy chistki -
+rem       pravyy klik -> Zapusk ot imeni administratora)
 rem ============================================================
 
 where python >nul 2>&1
@@ -26,7 +27,7 @@ if %errorlevel% neq 0 (
     exit /b 1
 )
 
-python -m PyInstaller --onefile --name Cleaner --uac-admin ^
+python -m PyInstaller --onefile --name Cleaner ^
     --hidden-import tkinter --hidden-import _tkinter ^
     cleaner.py
 if %errorlevel% neq 0 (
