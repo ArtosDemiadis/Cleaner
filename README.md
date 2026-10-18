@@ -1,38 +1,43 @@
 # Cleaner
 
 Компактная утилита очистки Windows на базе **CCleaner64.exe**: реестр от мусора,
-файлы куки, трекеры и другие следы присутствия в сети. Один файл на чистом
-Python (stdlib, без зависимостей) + готовый конфиг для CCleaner.
+файлы куки, трекеры и другие следы присутствия в сети. Запуск — **двойным
+кликом по `Cleaner.exe`** (Python не нужен), внутри — чистый Python (stdlib).
 
 ## Состав
 
 | Файл | Назначение |
 |---|---|
-| `cleaner.py` | Основная утилита (CLI + `--gui`). Работает и без CCleaner |
+| **`Cleaner.exe`** | **Главный запуск: двойной клик → GUI**. Скачать: [Releases](https://github.com/ArtosDemiadis/Cleaner/releases) / `Cleaner-exe.zip` |
+| `cleaner.py` | Исходник утилиты (CLI + `--gui`). Работает и без CCleaner |
 | `ccleaner.ini` | Портативный конфиг для `CCleaner64.exe /AUTO` (реестр + куки + мусор) |
-| `Cleaner.bat` | Лаунчер для Windows: права админа → CCleaner → `cleaner.py` |
-| `Clean.ps1` | То же через PowerShell (`-DryRun -Cookies -Network` и т.д.) |
+| `build_exe.bat` | Самостоятельная пересборка `Cleaner.exe` на Windows (PyInstaller) |
+| `Cleaner.bat` / `Clean.ps1` | Лаунчеры без .exe: права админа → CCleaner → `cleaner.py` |
+| `.github/workflows/build-exe.yml` | Автосборка `Cleaner.exe` на Windows-раннере GitHub Actions |
 | `backup/` | Сюда пишутся `.reg`-бэкапы реестра (создаётся при очистке, в .gitignore) |
 
-## Быстрый старт (Windows)
+## Быстрый старт (Windows) — через .exe
 
-1. Положите портативный `CCleaner64.exe` рядом с `cleaner.py`
-   (или установите CCleaner в `C:\Program Files\CCleaner`) — он нужен для
-   **глубокой** чистки реестра. Без него утилита чистит встроенными средствами.
-2. Предпросмотр (ничего не удаляется):
+1. Скачайте **`Cleaner.exe`** из
+   [Releases](https://github.com/ArtosDemiadis/Cleaner/releases/download/v1.0.0/Cleaner.exe)
+   (или весь архив `Cleaner-exe.zip`) и положите рядом `ccleaner.ini`.
+2. **Двойной клик по `Cleaner.exe`** → откроется окно (UAC попросит права
+   администратора), по умолчанию включён Dry-run — сначала «Очистить»
+   покажет план, затем снимите галочку Dry-run для реальной очистки.
+3. Опционально: портативный `CCleaner64.exe` рядом с `Cleaner.exe`
+   (или установленный в `C:\Program Files\CCleaner`) — для **глубокой**
+   чистки реестра. Без него утилита чистит встроенными средствами.
 
-   ```bat
-   python cleaner.py --dry-run --all
-   ```
+Из консоли `.exe` принимает те же флаги, что и скрипт:
 
-3. Полная очистка:
+```bat
+Cleaner.exe --dry-run --all
+Cleaner.exe --all
+Cleaner.exe --cookies --network
+```
 
-   ```bat
-   Cleaner.bat --all
-   :: или
-   python cleaner.py --all
-   python cleaner.py --gui        :: простой графический интерфейс
-   ```
+Без `.exe` (нужен Python): `python cleaner.py --dry-run --all` ·
+`python cleaner.py --gui` · пересборка: `build_exe.bat` → `dist\Cleaner.exe`
 
 ## Что чистится
 

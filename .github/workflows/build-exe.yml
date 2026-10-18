@@ -1,0 +1,67 @@
+name: Build Cleaner.exe
+
+# Сборка Windows .exe через PyInstaller на windows-раннере.
+# Запуск: вручную (Actions -> Build Cleaner.exe -> Run workflow)
+# или автоматически при пуше cleaner.py / этого файла в любую ветку.
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "cleaner.py"
+      - ".github/workflows/build-exe.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install PyInstaller
+        run: pip install pyinstaller
+
+      - name: Build Cleaner.exe (onefile, UAC admin, tkinter GUI)
+        run: >
+          pyinstaller --onefile --name Cleaner --uac-admin
+          --hidden-import tkinter --hidden-import _tkinter
+          cleaner.py
+
+      - name: Smoke test (CLI must start and print help)
+        shell: cmd
+        run: |
+          dist\Cleaner.exe --help
+          dist\Cleaner.exe --dry-run --all --yes --no-ccleaner
+
+      - name: Pack archive (exe + config + readme)
+        shell: pwsh
+        run: |
+          Copy-Item ccleaner.ini dist/
+          Copy-Item README.md dist/
+          Compress-Archive -Path dist/Cleaner.exe, dist/ccleaner.ini, dist/README.md -DestinationPath Cleaner-exe.zip -Force
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Cleaner-exe
+          path: |
+            dist/Cleaner.exe
+            Cleaner-exe.zip
+
+      - name: Publish GitHub Release (only on manual run from this branch)
+        if: github.event_name == 'workflow_dispatch'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $tag = "v1.0.0"
+          gh release view $tag --repo $env:GITHUB_REPOSITORY 2>$null
+          if ($LASTEXITCODE -ne 0) {
+            gh release create $tag --repo $env:GITHUB_REPOSITORY --title "Cleaner v1.0.0 (Cleaner.exe)" --notes "Cleaner.exe - запуск двойным кликом (GUI), Python не нужен. Cleaner.exe --dry-run --all - CLI. CCleaner64.exe (опционально) положите рядом для глубокой чистки реестра."
+          }
+          gh release upload $tag dist/Cleaner.exe Cleaner-exe.zip --repo $env:GITHUB_REPOSITORY --clobber

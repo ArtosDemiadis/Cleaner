@@ -21,13 +21,16 @@ Cleaner — компактная утилита очистки Windows на ба
   Пароли, логины (Login Data) и автозаполнение НЕ трогаются.
 
 Примеры:
+  Cleaner.exe                                # двойной клик -> GUI (собранный .exe)
+  Cleaner.exe --dry-run --all                # предпросмотр из консоли
   python cleaner.py --dry-run --all          # предпросмотр
   python cleaner.py --all                    # полная очистка (+ CCleaner, если найден)
   python cleaner.py --cookies --network      # только куки/трекеры и сетевые следы
   python cleaner.py --registry --no-ccleaner # только реестр, без CCleaner
   Cleaner.bat --all                          # то же через лаунчер (просит права админа)
 
-Требуется: Windows 10/11, Python 3.8+ (для глубокой чистки реестра — CCleaner64.exe рядом).
+Требуется: Windows 10/11. Для Cleaner.exe Python не нужен (всё внутри .exe),
+для cleaner.py — Python 3.8+. Для глубокой чистки реестра — CCleaner64.exe рядом.
 """
 
 from __future__ import annotations
@@ -61,6 +64,32 @@ def env(name: str, default: str = "") -> str:
     return os.environ.get(name, default)
 
 
+FROZEN = bool(getattr(sys, "frozen", False))  # True внутри PyInstaller .exe
+
+
+def app_dir() -> str:
+    """Папка, где лежит Cleaner.exe (или cleaner.py при обычном запуске).
+
+    В PyInstaller __file__ указывает во временную папку распаковки _MEIPASS,
+    поэтому для .exe соседние файлы (CCleaner64.exe, ccleaner.ini, backup/)
+    ищем рядом с самим .exe через sys.executable.
+    """
+    if FROZEN:
+        return os.path.dirname(os.path.abspath(sys.executable))
+    return os.path.dirname(os.path.abspath(__file__))
+
+
+def hide_console() -> None:
+    """Спрятать консольное окно при GUI-запуске собранного .exe."""
+    if IS_WIN:
+        try:
+            hwnd = ctypes.windll.kernel32.GetConsoleWindow()
+            if hwnd:
+                ctypes.windll.user32.ShowWindow(hwnd, 0)
+        except Exception:
+            pass
+
+
 class Cleaner:
     def __init__(self, dry_run: bool = False, verbose: bool = True):
         self.dry_run = dry_run
@@ -69,8 +98,7 @@ class Cleaner:
         self.count = 0
         self.errors = 0
         stamp = _dt.datetime.now().strftime("%Y%m%d_%H%M%S")
-        self.backup_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                                       "backup", stamp)
+        self.backup_dir = os.path.join(app_dir(), "backup", stamp)
 
     def log(self, msg: str = "") -> None:
         if self.verbose:
@@ -291,7 +319,7 @@ class Cleaner:
     @staticmethod
     def find_ccleaner(explicit: str = "") -> str:
         cands = [explicit] if explicit else []
-        here = os.path.dirname(os.path.abspath(__file__))
+        here = app_dir()
         cands += [
             os.path.join(here, "CCleaner64.exe"),
             os.path.join(here, "CCleaner", "CCleaner64.exe"),
@@ -369,12 +397,13 @@ def run(args) -> int:
 
 
 def gui() -> None:  # минимальный GUI, stdlib tkinter
+    hide_console()
     import tkinter as tk
     from tkinter import messagebox, ttk
 
     root = tk.Tk()
     root.title("Cleaner — реестр, куки, трекеры")
-    root.geometry("420x300")
+    root.geometry("460x340")
     dry = tk.BooleanVar(value=True)
     opts = {k: tk.BooleanVar(value=True) for k in ("registry", "cookies", "temp", "network")}
     labels = {"registry": "Реестр (MRU, с бэкапом)", "cookies": "Куки, трекеры, кэш браузеров",
@@ -406,8 +435,13 @@ def gui() -> None:  # минимальный GUI, stdlib tkinter
 
 
 if __name__ == "__main__":
-    args = build_parser().parse_args()
-    if args.gui:
+    # Двойной клик по Cleaner.exe (без аргументов) -> сразу GUI, без консоли.
+    # С аргументами из cmd/PowerShell -> обычный CLI (Cleaner.exe --all и т.д.)
+    if FROZEN and len(sys.argv) == 1:
         gui()
     else:
-        sys.exit(run(args))
+        args = build_parser().parse_args()
+        if args.gui:
+            gui()
+        else:
+            sys.exit(run(args))
