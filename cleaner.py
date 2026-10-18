@@ -50,6 +50,14 @@ try:
 except ImportError:  # Linux/macOS — только dry-run/диагностика
     winreg = None
 
+# Русский вывод не должен падать на Windows с нерусской кодовой страницей
+# (напр. cp437/cp1252 на en-US системах): форсим UTF-8 с заменой символов.
+for _stream in (sys.stdout, sys.stderr):
+    try:
+        _stream.reconfigure(encoding="utf-8", errors="replace")  # type: ignore[union-attr]
+    except Exception:
+        pass
+
 # ----------------------------------------------------------------------------- утилиты
 
 def human(n: int) -> str:

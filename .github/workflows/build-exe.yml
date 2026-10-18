@@ -33,12 +33,21 @@ jobs:
           cleaner.py
 
       - name: Smoke test (CLI must start and print help)
-        shell: pwsh
+        shell: python
         run: |
-          & dist/Cleaner.exe --help
-          if ($LASTEXITCODE -ne 0) { throw "Cleaner.exe --help exit=$LASTEXITCODE" }
-          & dist/Cleaner.exe --dry-run --all --yes --no-ccleaner
-          if ($LASTEXITCODE -ne 0) { throw "Cleaner.exe --dry-run exit=$LASTEXITCODE" }
+          import subprocess, sys
+          for argv in (["dist/Cleaner.exe", "--help"],
+                       ["dist/Cleaner.exe", "--dry-run", "--all", "--yes", "--no-ccleaner"]):
+              p = subprocess.run(argv, capture_output=True, text=True,
+                                 encoding="utf-8", errors="replace", timeout=300)
+              print("$", *argv, "-> exit", p.returncode)
+              print(p.stdout)
+              print(p.stderr, file=sys.stderr)
+              if p.returncode != 0:
+                  esc = (p.stdout + p.stderr).replace("%", "%25") \
+                      .replace("\r", "%0D").replace("\n", "%0A")[:3000]
+                  print(f"::error title=smoke-failed::{esc}")
+                  sys.exit(1)
 
       - name: Pack archive (exe + config + readme)
         shell: pwsh
