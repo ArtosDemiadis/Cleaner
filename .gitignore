@@ -1,0 +1,5 @@
+backup/
+__pycache__/
+*.log
+CCleaner64.exe
+CCleaner/
