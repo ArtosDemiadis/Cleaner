@@ -36,6 +36,11 @@ jobs:
         shell: python
         run: |
           import os, subprocess, sys, traceback
+          for _s in (sys.stdout, sys.stderr):
+              try:
+                  _s.reconfigure(encoding="utf-8", errors="replace")
+              except Exception:
+                  pass
           def note(title, text):
               esc = str(text).replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")[:3000]
               print(f"::error title={title}::{esc}", flush=True)
