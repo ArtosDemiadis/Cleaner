@@ -19,7 +19,7 @@
 ## Быстрый старт (Windows) — через .exe
 
 1. Скачайте **`Cleaner.exe`** из
-   [Releases](https://github.com/ArtosDemiadis/Cleaner/releases/download/v1.0.0/Cleaner.exe)
+   [Releases](https://github.com/ArtosDemiadis/Cleaner/releases/download/v1.0.1/Cleaner.exe)
    (или весь архив `Cleaner-exe.zip`) и положите рядом `ccleaner.ini`.
 2. **Двойной клик по `Cleaner.exe`** → откроется окно, по умолчанию включён
    Dry-run — сначала «Очистить» (для полной очистки системных папок — правый
@@ -36,6 +36,26 @@ Cleaner.exe --dry-run --all
 Cleaner.exe --all
 Cleaner.exe --cookies --network
 ```
+
+### Проверка локации / страны — отключение (`--no-geo`)
+
+В самом `Cleaner.exe` **определителя локации и запретов по странам нет**:
+он не делает сетевых обращений и не определяет страну (проверяется по
+открытому исходнику `cleaner.py`). Единственный компонент, где теоретически
+может быть своя проверка страны, — внешний проприетарный `CCleaner64.exe`,
+который `Cleaner.exe` запускает только если находит рядом. Отключается при запуске:
+
+```bat
+Cleaner.exe --no-geo                    :: GUI с отключённой проверкой (ярлык с этим флагом)
+Cleaner.exe --no-geo --dry-run --all    :: CLI: план очистки без CCleaner64.exe
+Cleaner.exe --no-geo --all              :: CLI: полная очистка встроенными средствами
+set CLEANER_NO_GEO=1                    :: то же для двойного клика без ярлыка
+```
+
+В GUI это галочка «Без проверки локации (--no-geo…)». С флагом очистка идёт
+встроенными средствами (реестр-MRU, куки/трекеры, temp, DNS) — без запуска
+`CCleaner64.exe`. Патчить/взламывать сам проприетарный `CCleaner64.exe`
+утилита не будет.
 
 Без `.exe` (нужен Python): `python cleaner.py --dry-run --all` ·
 `python cleaner.py --gui` · пересборка: `build_exe.bat` → `dist\Cleaner.exe`

@@ -372,6 +372,9 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--recycle", action="store_true", help="очистить корзину")
     p.add_argument("--dry-run", action="store_true", help="ничего не удалять, только показать план")
     p.add_argument("--yes", "-y", action="store_true", help="без подтверждения")
+    p.add_argument("--no-geo", "--offline", dest="no_geo", action="store_true",
+                   help="отключить определитель локации/проверку страны: в самом Cleaner.exe "
+                        "её нет, флаг гарантирует, что внешний CCleaner64.exe не запустится")
     p.add_argument("--no-ccleaner", action="store_true", help="не запускать CCleaner64.exe")
     p.add_argument("--ccleaner", metavar="PATH", default="", help="путь к CCleaner64.exe")
     p.add_argument("--gui", action="store_true", help="простой графический интерфейс (tkinter)")
@@ -380,16 +383,26 @@ def build_parser() -> argparse.ArgumentParser:
 
 def run(args) -> int:
     c = Cleaner(dry_run=args.dry_run)
+    no_geo = getattr(args, "no_geo", False) or env("CLEANER_NO_GEO") == "1"
+    if no_geo:
+        # В самом Cleaner.exe определителя локации/проверки страны НЕТ и сетевых
+        # обращений он не делает. Флаг --no-geo дополнительно гарантирует, что
+        # не будет запущен внешний CCleaner64.exe — единственный компонент,
+        # в котором теоретически могла бы быть своя проверка страны.
+        c.log("[--no-geo] Проверка локации/страны: ОТКЛЮЧЕНА. "
+              "Cleaner.exe локацию не определяет, в интернет не обращается, "
+              "внешний CCleaner64.exe не запускается.")
     do_all = args.all or not any([args.registry, args.cookies, args.temp, args.network])
     if not (args.yes or args.dry_run):
         ans = input("Начать очистку? [y/N] ").strip().lower()
         if ans not in ("y", "yes", "д", "да"):
             print("Отменено.")
             return 1
-    cc = "" if args.no_ccleaner else c.find_ccleaner(args.ccleaner)
+    no_ccleaner = args.no_ccleaner or no_geo
+    cc = "" if no_ccleaner else c.find_ccleaner(args.ccleaner)
     if cc and (do_all or args.registry or args.cookies):
         c.run_ccleaner(cc)
-    elif not args.no_ccleaner:
+    elif not no_ccleaner:
         c.log("CCleaner64.exe не найден рядом/в Program Files — работаю встроенными средствами.")
         c.log("Положите портативный CCleaner64.exe рядом с cleaner.py для глубокой чистки реестра.")
     if do_all or args.registry:
@@ -404,21 +417,24 @@ def run(args) -> int:
     return 0
 
 
-def gui() -> None:  # минимальный GUI, stdlib tkinter
+def gui(no_geo_default: bool = False) -> None:  # минимальный GUI, stdlib tkinter
     hide_console()
     import tkinter as tk
     from tkinter import messagebox, ttk
 
     root = tk.Tk()
     root.title("Cleaner — реестр, куки, трекеры")
-    root.geometry("460x340")
+    root.geometry("460x360")
     dry = tk.BooleanVar(value=True)
+    no_geo = tk.BooleanVar(value=no_geo_default or env("CLEANER_NO_GEO") == "1")
     opts = {k: tk.BooleanVar(value=True) for k in ("registry", "cookies", "temp", "network")}
     labels = {"registry": "Реестр (MRU, с бэкапом)", "cookies": "Куки, трекеры, кэш браузеров",
               "temp": "Временные файлы", "network": "Сеть: DNS, Recent, буфер, корзина"}
     for k, v in opts.items():
         ttk.Checkbutton(root, text=labels[k], variable=v).pack(anchor="w", padx=12, pady=2)
     ttk.Checkbutton(root, text="Dry-run (только показать)", variable=dry).pack(anchor="w", padx=12, pady=6)
+    ttk.Checkbutton(root, text="Без проверки локации (--no-geo, не запускать CCleaner64.exe)",
+                    variable=no_geo).pack(anchor="w", padx=12, pady=2)
     logbox = tk.Text(root, height=8, width=52)
     logbox.pack(padx=12, pady=6)
 
@@ -427,6 +443,7 @@ def gui() -> None:  # минимальный GUI, stdlib tkinter
             pass
         a = A()
         a.dry_run, a.yes, a.no_ccleaner, a.ccleaner = dry.get(), True, False, ""
+        a.no_geo = no_geo.get()
         a.all, a.history, a.recycle = False, False, True
         a.registry, a.cookies, a.temp, a.network = (opts[k].get() for k in
                                                     ("registry", "cookies", "temp", "network"))
@@ -444,12 +461,12 @@ def gui() -> None:  # минимальный GUI, stdlib tkinter
 
 if __name__ == "__main__":
     # Двойной клик по Cleaner.exe (без аргументов) -> сразу GUI, без консоли.
-    # С аргументами из cmd/PowerShell -> обычный CLI (Cleaner.exe --all и т.д.)
-    if FROZEN and len(sys.argv) == 1:
-        gui()
+    # Ярлык вида `Cleaner.exe --no-geo` -> тоже GUI, но с отключённой
+    # проверкой локации. С остальными аргументами -> обычный CLI.
+    _args = build_parser().parse_args()
+    _sections = any([_args.all, _args.registry, _args.cookies, _args.temp, _args.network])
+    if _args.gui or (FROZEN and len(sys.argv) == 1) or \
+            (FROZEN and _args.no_geo and not _sections):
+        gui(no_geo_default=_args.no_geo)
     else:
-        args = build_parser().parse_args()
-        if args.gui:
-            gui()
-        else:
-            sys.exit(run(args))
+        sys.exit(run(_args))
