@@ -48,7 +48,8 @@ jobs:
               print("dist:", os.listdir("dist"), flush=True)
               print("exe size:", os.path.getsize("dist/Cleaner.exe"), flush=True)
               for argv in (["dist/Cleaner.exe", "--help"],
-                           ["dist/Cleaner.exe", "--dry-run", "--all", "--yes", "--no-ccleaner"]):
+                           ["dist/Cleaner.exe", "--dry-run", "--all", "--yes", "--no-ccleaner"],
+                           ["dist/Cleaner.exe", "--dry-run", "--geo", "--yes", "--no-ccleaner"]):
                   p = subprocess.run(argv, capture_output=True, text=True,
                                      encoding="utf-8", errors="replace", timeout=300)
                   print("$", *argv, "-> exit", p.returncode, flush=True)
@@ -78,15 +79,15 @@ jobs:
             dist/Cleaner.exe
             Cleaner-exe.zip
 
-      - name: Publish GitHub Release v1.0.1 with Cleaner.exe
+      - name: Publish GitHub Release v1.0.2 with Cleaner.exe
         if: success()
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          $tag = "v1.0.1"
+          $tag = "v1.0.2"
           gh release view $tag --repo $env:GITHUB_REPOSITORY 2>$null
           if ($LASTEXITCODE -ne 0) {
-            gh release create $tag --repo $env:GITHUB_REPOSITORY --title "Cleaner v1.0.1 (Cleaner.exe)" --notes "Cleaner.exe - двойной клик = GUI, Python не нужен. --no-geo: без проверки локации/страны (в самом Cleaner.exe ее нет; флаг не запускает внешний CCleaner64.exe). Cleaner.exe --no-geo --dry-run --all - CLI. CCleaner64.exe (опционально) положите рядом для глубокой чистки реестра."
+            gh release create $tag --repo $env:GITHUB_REPOSITORY --title "Cleaner v1.0.2 (Cleaner.exe)" --notes "Cleaner.exe - двойной клик = GUI, Python не нужен. --no-geo: без проверки локации/страны (в самом Cleaner.exe ее нет; флаг не запускает внешний CCleaner64.exe). Cleaner.exe --no-geo --dry-run --all - CLI. CCleaner64.exe (опционально) положите рядом для глубокой чистки реестра."
           }
           gh release upload $tag dist/Cleaner.exe Cleaner-exe.zip --repo $env:GITHUB_REPOSITORY --clobber

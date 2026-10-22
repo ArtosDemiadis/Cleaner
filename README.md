@@ -19,7 +19,7 @@
 ## Быстрый старт (Windows) — через .exe
 
 1. Скачайте **`Cleaner.exe`** из
-   [Releases](https://github.com/ArtosDemiadis/Cleaner/releases/download/v1.0.1/Cleaner.exe)
+   [Releases](https://github.com/ArtosDemiadis/Cleaner/releases/download/v1.0.2/Cleaner.exe)
    (или весь архив `Cleaner-exe.zip`) и положите рядом `ccleaner.ini`.
 2. **Двойной клик по `Cleaner.exe`** → откроется окно, по умолчанию включён
    Dry-run — сначала «Очистить» (для полной очистки системных папок — правый
@@ -72,6 +72,19 @@ set CLEANER_NO_GEO=1                    :: то же для двойного к�
   **Пароли (`Login Data`) не трогаются.** Браузеры перед очисткой закрыть.
 - **Следы в сети/системе** — сброс DNS-кэша (`ipconfig /flushdns`), `Recent`,
   буфер обмена, Temp пользователя и Windows, кэш эскизов/иконок, корзина.
+- **Последняя геопозиция и IP-геометки (`--geo`)** — кэш службы геолокации
+  Windows `%ProgramData%\Microsoft\Windows\LfSvc\Cache` (последняя известная
+  позиция; служба `lfsvc` на время очистки останавливается), отметки
+  использования геолокации `LastUsedTime*` в
+  `HKCU\…\CapabilityAccessManager\ConsentStore\location` (рекурсивно, с
+  `.reg`-бэкапом), даты `DateCreated`/`DateLastConnected` у сетевых профилей
+  `HKLM\…\NetworkList\Profiles` (SSID + последняя отметка подключения, сами
+  профили Wi-Fi и подписи сетей с MAC шлюза не удаляются — иначе Windows
+  забудет сети), гео-разрешения сайтов: `geolocation` в Chromium `Preferences`
+  и строки `type='geo'` в Firefox `permissions.sqlite`. Город/регион по
+  публичному IP сайты считают у себя и кладут в cookies/Local Storage —
+  те сносит секция `--cookies`. Облачную историю местоположений Microsoft
+  локально не стереть: account.microsoft.com → Privacy → Location activity.
 
 ## Флаги
 
@@ -80,6 +93,7 @@ set CLEANER_NO_GEO=1                    :: то же для двойного к�
 --registry       только реестр          --cookies   только куки/трекеры/кэш
 --temp           только временные файлы --network   только DNS/Recent/буфер
 --history        + история посещений    --recycle   + корзина
+--geo            + последняя геопозиция и IP-геометки (входит в --network и --all)
 --dry-run        только показать план   --yes       без подтверждения
 --no-ccleaner    не запускать CCleaner  --ccleaner PATH   путь к CCleaner64.exe
 --gui            графический интерфейс
